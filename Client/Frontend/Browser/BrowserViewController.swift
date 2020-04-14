@@ -42,7 +42,8 @@ private struct BrowserViewControllerUX {
 }
 
 class BrowserViewController: UIViewController {
-    var favoritesViewController: FavoritesViewController?
+//    var favoritesViewController: FavoritesViewController?
+    var favoritesViewController: NewTabPageViewController?
     var webViewContainer: UIView!
     var topToolbar: TopToolbarView!
     var tabsBar: TabsBarViewController!
@@ -680,7 +681,7 @@ class BrowserViewController: UIViewController {
         
         updateTabCountUsingTabManager(tabManager)
         clipboardBarDisplayHandler?.checkIfShouldDisplayBar()
-        favoritesViewController?.updateDuckDuckGoVisibility()
+//        favoritesViewController?.updateDuckDuckGoVisibility()
         
         if let tabId = tabManager.selectedTab?.rewardsId, rewards.ledger.selectedTabId == 0 {
             rewards.ledger.selectedTabId = tabId
@@ -969,13 +970,15 @@ class BrowserViewController: UIViewController {
         homePanelIsInline = inline
 
         if favoritesViewController == nil {
-            let homePanelController = FavoritesViewController(profile: profile,
-                                                              fromOverlay: !inline,
-                                                              rewards: rewards,
-                                                              backgroundDataSource: backgroundDataSource)
+            let homePanelController = NewTabPageViewController(tab: tabManager.selectedTab!, profile: profile)
             homePanelController.delegate = self
-            homePanelController.view.alpha = 0
-            homePanelController.applyTheme(Theme.of(tabManager.selectedTab))
+//            let homePanelController = FavoritesViewController(profile: profile,
+//                                                              fromOverlay: !inline,
+//                                                              rewards: rewards,
+//                                                              backgroundDataSource: backgroundDataSource)
+//            homePanelController.delegate = self
+//            homePanelController.view.alpha = 0
+//            homePanelController.applyTheme(Theme.of(tabManager.selectedTab))
 
             self.favoritesViewController = homePanelController
 
@@ -1622,7 +1625,7 @@ class BrowserViewController: UIViewController {
             Preferences.Popups.duckDuckGoPrivateSearch.value = true
             self?.profile.searchEngines.setDefaultEngine(OpenSearchEngine.EngineNames.duckDuckGo, forType: .privateMode)
             
-            self?.favoritesViewController?.updateDuckDuckGoVisibility()
+//            self?.favoritesViewController?.updateDuckDuckGoVisibility()
             
             return .flyUp
         }
@@ -1919,7 +1922,16 @@ extension BrowserViewController: TopToolbarDelegate {
 
 extension BrowserViewController: ToolbarDelegate {
     func tabToolbarDidPressSearch(_ tabToolbar: ToolbarProtocol, button: UIButton) {
-        topToolbar.tabLocationViewDidTapLocation(topToolbar.locationView)
+        let controller = NewTabPageViewController(tab: tabManager.selectedTab!, profile: profile)
+        controller.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(closeTemp))
+        let container = UINavigationController(rootViewController: controller)
+        container.navigationBar.isTranslucent = false
+        self.present(container, animated: true)
+//        topToolbar.tabLocationViewDidTapLocation(topToolbar.locationView)
+    }
+    
+    @objc func closeTemp() {
+        dismiss(animated: true)
     }
     
     func tabToolbarDidPressBack(_ tabToolbar: ToolbarProtocol, button: UIButton) {
@@ -3349,6 +3361,28 @@ extension BrowserViewController: ToolbarUrlActionsDelegate {
                 arrowDirection: [.up]
             )
         }
+    }
+}
+
+extension BrowserViewController: NewTabPageDelegate {
+    func navigateToInput(_ input: String, inNewTab: Bool, switchingToPrivateMode: Bool) {
+        let isPrivate = PrivateBrowsingManager.shared.isPrivateBrowsing || switchingToPrivateMode
+        if inNewTab {
+            tabManager.addTabAndSelect(isPrivate: isPrivate)
+        }
+        processAddressBar(text: input, visitType: .bookmark)
+    }
+    
+    func focusURLBar() {
+        focusLocationField()
+    }
+    
+    func presentDuckDuckGoCallout() {
+        presentDuckDuckGoCallout(force: true)
+    }
+    
+    func sponseredImageCalloutActioned(_ state: BrandedImageCalloutState) {
+        
     }
 }
 
